@@ -19,22 +19,9 @@ class CompletionTrendChartWidget extends StatefulWidget {
 
 class _CompletionTrendChartWidgetState
     extends State<CompletionTrendChartWidget> {
-  final List<Map<String, dynamic>> weeklyData = [
-    {"day": "Mon", "completed": 8, "total": 12},
-    {"day": "Tue", "completed": 15, "total": 18},
-    {"day": "Wed", "completed": 12, "total": 15},
-    {"day": "Thu", "completed": 20, "total": 22},
-    {"day": "Fri", "completed": 18, "total": 20},
-    {"day": "Sat", "completed": 10, "total": 12},
-    {"day": "Sun", "completed": 6, "total": 8},
-  ];
-
-  final List<Map<String, dynamic>> monthlyData = [
-    {"week": "Week 1", "completed": 89, "total": 107},
-    {"week": "Week 2", "completed": 95, "total": 110},
-    {"week": "Week 3", "completed": 78, "total": 95},
-    {"week": "Week 4", "completed": 102, "total": 115},
-  ];
+    // No mock weekly or monthly data
+    final List<Map<String, dynamic>> weeklyData = [];
+    final List<Map<String, dynamic>> monthlyData = [];
 
   @override
   Widget build(BuildContext context) {

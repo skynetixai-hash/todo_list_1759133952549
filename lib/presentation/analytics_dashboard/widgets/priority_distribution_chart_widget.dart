@@ -9,26 +9,8 @@ class PriorityDistributionChartWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final List<Map<String, dynamic>> priorityData = [
-      {
-        "priority": "High",
-        "completed": 18,
-        "total": 25,
-        "color": Color(0xFFDC2626)
-      },
-      {
-        "priority": "Medium",
-        "completed": 32,
-        "total": 40,
-        "color": Color(0xFFD97706)
-      },
-      {
-        "priority": "Low",
-        "completed": 28,
-        "total": 30,
-        "color": Color(0xFF059669)
-      },
-    ];
+    // No mock priority data
+    final List<Map<String, dynamic>> priorityData = [];
 
     return Container(
         margin: EdgeInsets.symmetric(horizontal: 4.w),

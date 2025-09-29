@@ -11,36 +11,8 @@ class ProductivityInsightsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final List<Map<String, dynamic>> insights = [
-      {
-        "title": "Most Productive Day",
-        "value": "Thursday",
-        "description": "You complete 25% more tasks on Thursdays",
-        "iconName": "calendar_today",
-        "color": Color(0xFF059669),
-      },
-      {
-        "title": "Peak Completion Time",
-        "value": "10:00 AM",
-        "description": "Your highest task completion rate occurs at 10 AM",
-        "iconName": "schedule",
-        "color": Color(0xFF2563EB),
-      },
-      {
-        "title": "Top Category",
-        "value": "Work Tasks",
-        "description": "45% of your completed tasks are work-related",
-        "iconName": "work",
-        "color": Color(0xFF8B5CF6),
-      },
-      {
-        "title": "Completion Streak",
-        "value": "12 Days",
-        "description": "Current streak of completing daily goals",
-        "iconName": "local_fire_department",
-        "color": Color(0xFFD97706),
-      },
-    ];
+    // No mock insights data
+    final List<Map<String, dynamic>> insights = [];
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 4.w),
