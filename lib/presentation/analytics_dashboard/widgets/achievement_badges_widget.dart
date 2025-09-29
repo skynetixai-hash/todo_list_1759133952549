@@ -10,8 +10,50 @@ class AchievementBadgesWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // No mock achievements data
-    final List<Map<String, dynamic>> achievements = [];
+    final List<Map<String, dynamic>> achievements = [
+      {
+        "title": "Task Master",
+        "description": "Completed 100 tasks",
+        "iconName": "emoji_events",
+        "isUnlocked": true,
+        "color": Color(0xFFFFD700),
+      },
+      {
+        "title": "Streak Champion",
+        "description": "10-day completion streak",
+        "iconName": "local_fire_department",
+        "isUnlocked": true,
+        "color": Color(0xFFFF6B35),
+      },
+      {
+        "title": "Early Bird",
+        "description": "Complete 5 tasks before 9 AM",
+        "iconName": "wb_sunny",
+        "isUnlocked": true,
+        "color": Color(0xFFFFA726),
+      },
+      {
+        "title": "Productivity Pro",
+        "description": "95% completion rate for a week",
+        "iconName": "trending_up",
+        "isUnlocked": false,
+        "color": Color(0xFF42A5F5),
+      },
+      {
+        "title": "Category King",
+        "description": "Complete tasks in 5 different categories",
+        "iconName": "category",
+        "isUnlocked": false,
+        "color": Color(0xFF66BB6A),
+      },
+      {
+        "title": "Speed Demon",
+        "description": "Complete 20 tasks in one day",
+        "iconName": "flash_on",
+        "isUnlocked": false,
+        "color": Color(0xFFAB47BC),
+      },
+    ];
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 4.w),
