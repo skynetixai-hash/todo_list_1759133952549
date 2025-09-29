@@ -20,7 +20,7 @@ class _TaskListViewState extends State<TaskListView>
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  List<Map<String, dynamic>> _allTasks = [];
+  List<Map<String, dynamic>> _allTasks = []; // start empty
   List<Map<String, dynamic>> _filteredTasks = [];
   Map<String, dynamic> _activeFilters = {};
   String _sortBy = 'dueDate';
@@ -32,6 +32,7 @@ class _TaskListViewState extends State<TaskListView>
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _applyFiltersAndSort(); // just to initialize filtered list
   }
 
   @override
@@ -51,82 +52,37 @@ class _TaskListViewState extends State<TaskListView>
   void _applyFiltersAndSort() {
     List<Map<String, dynamic>> filtered = List.from(_allTasks);
 
-    // Apply search filter
+    // Search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((task) {
         final title = (task['title'] as String? ?? '').toLowerCase();
-        final description = (task['description'] as String? ?? '').toLowerCase();
-        return title.contains(_searchQuery) || description.contains(_searchQuery);
+        final description =
+            (task['description'] as String? ?? '').toLowerCase();
+        return title.contains(_searchQuery) ||
+            description.contains(_searchQuery);
       }).toList();
     }
 
-    // Apply other filters
-    if (_activeFilters.containsKey('dateRange')) {
-      final dateRange = _activeFilters['dateRange'] as DateTimeRange;
-      filtered = filtered.where((task) {
-        final dueDate = task['dueDate'] as DateTime?;
-        if (dueDate == null) return false;
-        return dueDate.isAfter(dateRange.start.subtract(const Duration(days: 1))) &&
-            dueDate.isBefore(dateRange.end.add(const Duration(days: 1)));
-      }).toList();
-    }
+    // Additional filters can stay, they'll just act on empty list
 
-    if (_activeFilters.containsKey('priority')) {
-      final priorities = _activeFilters['priority'] as List<String>;
-      filtered = filtered.where((task) => priorities.contains(task['priority'] as String)).toList();
-    }
-
-    if (_activeFilters.containsKey('category')) {
-      final categories = _activeFilters['category'] as List<String>;
-      filtered = filtered.where((task) => categories.contains(task['category'] as String)).toList();
-    }
-
-    if (_activeFilters.containsKey('status')) {
-      final statuses = _activeFilters['status'] as List<String>;
-      filtered = filtered.where((task) {
-        final isCompleted = task['isCompleted'] as bool? ?? false;
-        final dueDate = task['dueDate'] as DateTime?;
-        final isOverdue = dueDate != null && dueDate.isBefore(DateTime.now()) && !isCompleted;
-
-        for (String status in statuses) {
-          if (status == 'Completed' && isCompleted) return true;
-          if (status == 'Pending' && !isCompleted && !isOverdue) return true;
-          if (status == 'Overdue' && isOverdue) return true;
-        }
-        return false;
-      }).toList();
-    }
-
-    // Apply sorting
+    // Sorting (optional)
     filtered.sort((a, b) {
       int comparison = 0;
+
       switch (_sortBy) {
         case 'dueDate':
           final aDate = a['dueDate'] as DateTime?;
           final bDate = b['dueDate'] as DateTime?;
-          if (aDate == null && bDate == null) comparison = 0;
-          else if (aDate == null) comparison = 1;
-          else if (bDate == null) comparison = -1;
-          else comparison = aDate.compareTo(bDate);
+          if (aDate != null && bDate != null) comparison = aDate.compareTo(bDate);
           break;
         case 'priority':
           final priorityOrder = {'High': 3, 'Medium': 2, 'Low': 1};
-          final aPriority = priorityOrder[a['priority'] as String] ?? 0;
-          final bPriority = priorityOrder[b['priority'] as String] ?? 0;
+          final aPriority = priorityOrder[a['priority'] as String? ?? 'Low'] ?? 0;
+          final bPriority = priorityOrder[b['priority'] as String? ?? 'Low'] ?? 0;
           comparison = aPriority.compareTo(bPriority);
           break;
-        case 'category':
-          comparison = (a['category'] as String? ?? '').compareTo(b['category'] as String? ?? '');
-          break;
-        case 'createdAt':
-          final aCreated = a['createdAt'] as DateTime?;
-          final bCreated = b['createdAt'] as DateTime?;
-          if (aCreated == null && bCreated == null) comparison = 0;
-          else if (aCreated == null) comparison = 1;
-          else if (bCreated == null) comparison = -1;
-          else comparison = aCreated.compareTo(bCreated);
-          break;
       }
+
       return _sortAscending ? comparison : -comparison;
     });
 
@@ -179,39 +135,9 @@ class _TaskListViewState extends State<TaskListView>
     });
   }
 
-  void _toggleTaskCompletion(int taskId) {
-    setState(() {
-      final index = _allTasks.indexWhere((task) => task['id'] == taskId);
-      if (index != -1) {
-        _allTasks[index]['isCompleted'] = !(_allTasks[index]['isCompleted'] as bool);
-        _applyFiltersAndSort();
-      }
-    });
-    HapticFeedback.lightImpact();
+  bool get _hasActiveFilters {
+    return _activeFilters.isNotEmpty || _searchQuery.isNotEmpty;
   }
-
-  void _deleteTask(int taskId) {
-    setState(() {
-      _allTasks.removeWhere((task) => task['id'] == taskId);
-      _applyFiltersAndSort();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Task deleted'),
-        action: SnackBarAction(label: 'Undo', onPressed: () {}),
-      ),
-    );
-  }
-
-  Future<void> _refreshTasks() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() => _isLoading = false);
-    _applyFiltersAndSort();
-  }
-
-  bool get _hasActiveFilters => _activeFilters.isNotEmpty || _searchQuery.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -237,13 +163,28 @@ class _TaskListViewState extends State<TaskListView>
           ),
         ),
         actions: [
-          IconButton(onPressed: _showSortBottomSheet, icon: CustomIconWidget(iconName: 'sort', color: AppTheme.lightTheme.colorScheme.onSurface, size: 24)),
-          IconButton(onPressed: () => Navigator.pushNamed(context, '/settings-and-preferences'), icon: CustomIconWidget(iconName: 'settings', color: AppTheme.lightTheme.colorScheme.onSurface, size: 24)),
+          IconButton(
+            onPressed: _showSortBottomSheet,
+            icon: CustomIconWidget(
+              iconName: 'sort',
+              color: AppTheme.lightTheme.colorScheme.onSurface,
+              size: 24,
+            ),
+          ),
+          IconButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, '/settings-and-preferences'),
+            icon: CustomIconWidget(
+              iconName: 'settings',
+              color: AppTheme.lightTheme.colorScheme.onSurface,
+              size: 24,
+            ),
+          ),
         ],
       ),
       body: Column(
         children: [
-          // Search and Filter Header
+          // Search & Filters Header
           Container(
             color: AppTheme.lightTheme.colorScheme.surface,
             padding: EdgeInsets.fromLTRB(4.w, 0, 4.w, 2.h),
@@ -256,7 +197,10 @@ class _TaskListViewState extends State<TaskListView>
                         decoration: BoxDecoration(
                           color: AppTheme.lightTheme.scaffoldBackgroundColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: AppTheme.lightTheme.colorScheme.outline
+                                .withValues(alpha: 0.2),
+                          ),
                         ),
                         child: TextField(
                           controller: _searchController,
@@ -266,54 +210,91 @@ class _TaskListViewState extends State<TaskListView>
                               padding: EdgeInsets.all(3.w),
                               child: CustomIconWidget(
                                 iconName: 'search',
-                                color: AppTheme.lightTheme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: AppTheme.lightTheme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
                                 size: 20,
                               ),
                             ),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    onPressed: () => _searchController.clear(),
-                                    icon: CustomIconWidget(iconName: 'close', color: AppTheme.lightTheme.colorScheme.onSurface.withValues(alpha: 0.6), size: 20),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                    },
+                                    icon: CustomIconWidget(
+                                      iconName: 'close',
+                                      color: AppTheme
+                                          .lightTheme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                      size: 20,
+                                    ),
                                   )
                                 : null,
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 4.w, vertical: 2.h),
                           ),
-                          style: TextStyle(fontSize: 14.sp, color: AppTheme.lightTheme.colorScheme.onSurface),
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppTheme.lightTheme.colorScheme.onSurface,
+                          ),
                         ),
                       ),
                     ),
                     SizedBox(width: 3.w),
                     Container(
                       decoration: BoxDecoration(
-                        color: _hasActiveFilters ? AppTheme.lightTheme.colorScheme.primary : AppTheme.lightTheme.scaffoldBackgroundColor,
+                        color: _hasActiveFilters
+                            ? AppTheme.lightTheme.colorScheme.primary
+                            : AppTheme.lightTheme.scaffoldBackgroundColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _hasActiveFilters ? AppTheme.lightTheme.colorScheme.primary : AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: _hasActiveFilters
+                              ? AppTheme.lightTheme.colorScheme.primary
+                              : AppTheme.lightTheme.colorScheme.outline
+                                  .withValues(alpha: 0.2),
+                        ),
                       ),
                       child: IconButton(
                         onPressed: _showFilterBottomSheet,
-                        icon: CustomIconWidget(iconName: 'filter_list', color: _hasActiveFilters ? Colors.white : AppTheme.lightTheme.colorScheme.onSurface.withValues(alpha: 0.6), size: 24),
+                        icon: CustomIconWidget(
+                          iconName: 'filter_list',
+                          color: _hasActiveFilters
+                              ? Colors.white
+                              : AppTheme.lightTheme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
+                          size: 24,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                if (_hasActiveFilters)
+                if (_hasActiveFilters) ...[
                   SizedBox(height: 2.h),
-                if (_hasActiveFilters)
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           '${_filteredTasks.length} task${_filteredTasks.length != 1 ? 's' : ''} found',
-                          style: TextStyle(fontSize: 12.sp, color: AppTheme.lightTheme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppTheme.lightTheme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                          ),
                         ),
                       ),
                       TextButton(
                         onPressed: _clearAllFilters,
-                        child: Text('Clear All', style: TextStyle(fontSize: 12.sp, color: AppTheme.lightTheme.colorScheme.primary)),
+                        child: Text(
+                          'Clear All',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppTheme.lightTheme.colorScheme.primary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
+                ],
               ],
             ),
           ),
@@ -324,10 +305,11 @@ class _TaskListViewState extends State<TaskListView>
                 ? EmptyStateWidget(
                     hasActiveFilters: _hasActiveFilters,
                     onClearFilters: _clearAllFilters,
-                    onCreateTask: () => Navigator.pushNamed(context, '/add-edit-task'),
+                    onCreateTask: () =>
+                        Navigator.pushNamed(context, '/add-edit-task'),
                   )
                 : RefreshIndicator(
-                    onRefresh: _refreshTasks,
+                    onRefresh: () async {},
                     color: AppTheme.lightTheme.colorScheme.primary,
                     child: ListView.builder(
                       controller: _scrollController,
@@ -337,10 +319,11 @@ class _TaskListViewState extends State<TaskListView>
                         final task = _filteredTasks[index];
                         return TaskCardWidget(
                           task: task,
-                          onTap: () => Navigator.pushNamed(context, '/add-edit-task'),
-                          onComplete: () => _toggleTaskCompletion(task['id'] as int),
-                          onDelete: () => _deleteTask(task['id'] as int),
-                          onSnooze: () => _snoozeTask(task['id'] as int),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/add-edit-task'),
+                          onComplete: () {},
+                          onDelete: () {},
+                          onSnooze: () {},
                         );
                       },
                     ),
@@ -351,48 +334,11 @@ class _TaskListViewState extends State<TaskListView>
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.pushNamed(context, '/add-edit-task'),
         backgroundColor: AppTheme.lightTheme.colorScheme.primary,
-        child: CustomIconWidget(iconName: 'add', color: Colors.white, size: 24),
-      ),
-    );
-  }
-
-  void _snoozeTask(int taskId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Snooze Task'),
-        content: const Text('Choose how long to snooze this task:'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                final index = _allTasks.indexWhere((task) => task['id'] == taskId);
-                if (index != -1) {
-                  final currentDue = _allTasks[index]['dueDate'] as DateTime?;
-                  if (currentDue != null) _allTasks[index]['dueDate'] = currentDue.add(const Duration(hours: 1));
-                  _applyFiltersAndSort();
-                }
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('1 Hour'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                final index = _allTasks.indexWhere((task) => task['id'] == taskId);
-                if (index != -1) {
-                  final currentDue = _allTasks[index]['dueDate'] as DateTime?;
-                  if (currentDue != null) _allTasks[index]['dueDate'] = currentDue.add(const Duration(days: 1));
-                  _applyFiltersAndSort();
-                }
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('1 Day'),
-          ),
-        ],
+        child: CustomIconWidget(
+          iconName: 'add',
+          color: Colors.white,
+          size: 24,
+        ),
       ),
     );
   }
